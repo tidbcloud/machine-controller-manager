@@ -469,8 +469,11 @@ func (dc *controller) reconcileClusterMachineDeployment(key string) error {
 	if deployment.DeletionTimestamp == nil {
 		// Validate MachineClass if the machineDeployment is not triggerred for deletion
 		_, secretRef, err := dc.validateMachineClass(&deployment.Spec.Template.Spec.Class)
-		if err != nil || secretRef == nil {
+		if err != nil {
 			return err
+		}
+		if secretRef == nil {
+			return fmt.Errorf("Secret reference not found")
 		}
 	}
 

@@ -465,8 +465,11 @@ func (c *controller) reconcileClusterMachineSet(key string) error {
 	if machineSet.DeletionTimestamp == nil {
 		// Validate MachineClass
 		_, secretRef, err := c.validateMachineClass(&machineSet.Spec.Template.Spec.Class)
-		if err != nil || secretRef == nil {
+		if err != nil {
 			return err
+		}
+		if secretRef == nil {
+			return errors.New("Secret reference not found")
 		}
 
 		// Manipulate finalizers
