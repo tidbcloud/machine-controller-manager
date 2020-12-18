@@ -25,12 +25,10 @@ import (
 	"strings"
 	"time"
 
-	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-	compute "google.golang.org/api/compute/v1"
+	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -298,13 +296,7 @@ func (d *GCPDriver) GetVMs(machineID string) (VMs, error) {
 func (d *GCPDriver) createComputeService() (context.Context, *compute.Service, error) {
 	ctx := context.Background()
 
-	jwt, err := google.JWTConfigFromJSON(d.CloudConfig.Data[v1alpha1.GCPServiceAccountJSON], compute.CloudPlatformScope)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	oauthClient := oauth2.NewClient(ctx, jwt.TokenSource(ctx))
-	computeService, err := compute.New(oauthClient)
+	computeService, err := compute.NewService(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
