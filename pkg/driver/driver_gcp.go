@@ -25,10 +25,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
-	"google.golang.org/api/compute/v1"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	compute "google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -296,12 +298,44 @@ func (d *GCPDriver) GetVMs(machineID string) (VMs, error) {
 func (d *GCPDriver) createComputeService() (context.Context, *compute.Service, error) {
 	ctx := context.Background()
 
-	computeService, err := compute.NewService(ctx)
+	sa := d.CloudConfig.Data[v1alpha1.GCPServiceAccountJSON]
+	key, err := ExtractServiceAccountPrivateKey(sa)
+	if err != nil {
+		return nil, nil, err
+	}
+	if key == "" {
+		computeService, err := compute.NewService(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return ctx, computeService, nil
+	}
+
+	jwt, err := google.JWTConfigFromJSON(d.CloudConfig.Data[v1alpha1.GCPServiceAccountJSON], compute.CloudPlatformScope)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	oauthClient := oauth2.NewClient(ctx, jwt.TokenSource(ctx))
+	computeService, err := compute.New(oauthClient)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return ctx, computeService, nil
+}
+
+func ExtractServiceAccountPrivateKey(serviceAccountJSON []byte) (string, error) {
+	var serviceAccount struct {
+		PrivateKey string `json:"private_key"`
+	}
+
+	if err := json.Unmarshal(serviceAccountJSON, &serviceAccount); err != nil {
+		return "", err
+	}
+
+	return serviceAccount.PrivateKey, nil
 }
 
 func waitUntilOperationCompleted(computeService *compute.Service, project, zone, operationName string) error {
