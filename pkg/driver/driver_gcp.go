@@ -298,6 +298,20 @@ func (d *GCPDriver) GetVMs(machineID string) (VMs, error) {
 func (d *GCPDriver) createComputeService() (context.Context, *compute.Service, error) {
 	ctx := context.Background()
 
+	sa := d.CloudConfig.Data[v1alpha1.GCPServiceAccountJSON]
+	key, err := ExtractServiceAccountPrivateKey(sa)
+	if err != nil {
+		return nil, nil, err
+	}
+	if key == "" {
+		computeService, err := compute.NewService(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return ctx, computeService, nil
+	}
+
 	jwt, err := google.JWTConfigFromJSON(d.CloudConfig.Data[v1alpha1.GCPServiceAccountJSON], compute.CloudPlatformScope)
 	if err != nil {
 		return nil, nil, err
@@ -310,6 +324,18 @@ func (d *GCPDriver) createComputeService() (context.Context, *compute.Service, e
 	}
 
 	return ctx, computeService, nil
+}
+
+func ExtractServiceAccountPrivateKey(serviceAccountJSON []byte) (string, error) {
+	var serviceAccount struct {
+		PrivateKey string `json:"private_key"`
+	}
+
+	if err := json.Unmarshal(serviceAccountJSON, &serviceAccount); err != nil {
+		return "", err
+	}
+
+	return serviceAccount.PrivateKey, nil
 }
 
 func waitUntilOperationCompleted(computeService *compute.Service, project, zone, operationName string) error {
