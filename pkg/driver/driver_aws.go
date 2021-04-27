@@ -62,6 +62,9 @@ func (d *AWSDriver) Create() (string, string, error) {
 		return "Error", "Error", err
 	}
 
+	logOff := aws.LogOff
+	svc.Config.LogLevel = &logOff
+
 	UserDataEnc := base64.StdEncoding.EncodeToString([]byte(d.UserData))
 
 	var imageIds []*string
@@ -257,6 +260,9 @@ func (d *AWSDriver) Delete(machineID string) error {
 		return err
 	}
 
+	logOff := aws.LogOff
+	svc.Config.LogLevel = &logOff
+
 	describeImagesRequest := ec2.DescribeImagesInput{
 		ImageIds: imageIds,
 	}
@@ -372,6 +378,9 @@ func (d *AWSDriver) GetVMs(machineID string) (VMs, error) {
 	if err != nil {
 		return listOfVMs, err
 	}
+
+	logOff := aws.LogOff
+	svc.Config.LogLevel = &logOff
 
 	input := ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
