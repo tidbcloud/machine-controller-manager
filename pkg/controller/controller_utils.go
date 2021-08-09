@@ -775,13 +775,14 @@ func (s ActiveMachines) Less(i, j int) bool {
 	// machinePriority annotation.
 	// Case-2: If both priorities are equal, then we look at their machinePhase
 	// and prioritize as mentioned in the above map
-	// Case-3: If both Case-1 & Case-2 is false, we prioritize based on creation time
+	// Case-3: If both Case-1 & Case-2 is false, we prioritize based on creation time, new node will be scaled-in first
 	if machineIPriority != machineJPriority {
 		return machineIPriority < machineJPriority
 	} else if m[s[i].Status.CurrentStatus.Phase] != m[s[j].Status.CurrentStatus.Phase] {
 		return m[s[i].Status.CurrentStatus.Phase] < m[s[j].Status.CurrentStatus.Phase]
 	} else if s[i].CreationTimestamp != s[j].CreationTimestamp {
-		return s[i].CreationTimestamp.Before(&s[j].CreationTimestamp)
+		// scale new node first
+		return s[j].CreationTimestamp.Before(&s[i].CreationTimestamp)
 	}
 
 	return false
