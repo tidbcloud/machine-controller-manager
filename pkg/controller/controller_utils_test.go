@@ -196,7 +196,7 @@ var _ = Describe("#controllerUtils", func() {
 			sortedMachinesInOrderOfPhase[0].DeepCopy(),
 		}
 
-		sortedMachinesInOrderOfCreationTimeStamp := newMachines(3, &machinev1.MachineTemplateSpec{
+		machineCreatedOrder := newMachines(3, &machinev1.MachineTemplateSpec{
 			ObjectMeta: *newObjectMeta(objMeta, 0),
 			Spec: machinev1.MachineSpec{
 				Class: machinev1.ClassSpec{
@@ -205,10 +205,15 @@ var _ = Describe("#controllerUtils", func() {
 				},
 			},
 		}, nil, nil, nil, nil)
+		sortedMachinesInDescOrderOfCreationTimeStamp := []*machinev1.Machine{
+			machineCreatedOrder[2].DeepCopy(),
+			machineCreatedOrder[1].DeepCopy(),
+			machineCreatedOrder[0].DeepCopy(),
+		}
 		unsortedMachinesInOrderOfCreationTimeStamp := []*machinev1.Machine{
-			sortedMachinesInOrderOfCreationTimeStamp[1].DeepCopy(),
-			sortedMachinesInOrderOfCreationTimeStamp[0].DeepCopy(),
-			sortedMachinesInOrderOfCreationTimeStamp[2].DeepCopy(),
+			machineCreatedOrder[1].DeepCopy(),
+			machineCreatedOrder[0].DeepCopy(),
+			machineCreatedOrder[2].DeepCopy(),
 		}
 
 		DescribeTable("###sort",
@@ -227,7 +232,7 @@ var _ = Describe("#controllerUtils", func() {
 			}),
 			Entry("sort on creation timestamp", &data{
 				inputMachines:  unsortedMachinesInOrderOfCreationTimeStamp,
-				outputMachines: sortedMachinesInOrderOfCreationTimeStamp,
+				outputMachines: sortedMachinesInDescOrderOfCreationTimeStamp,
 			}),
 		)
 	})

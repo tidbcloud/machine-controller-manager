@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -345,6 +346,23 @@ func (c *controller) updateMachineState(machine *v1alpha1.Machine) (*v1alpha1.Ma
 		// Any other types of errors while fetching node object
 		klog.Errorf("Could not fetch node object for machine %s", machine.Name)
 		return machine, err
+	}
+
+	// Sync prioity from node object to machine object (if any)
+	if nodePriority, ok := node.Annotations[MachinePriority]; ok {
+
+		_, err = strconv.Atoi(nodePriority)
+		if err != nil {
+			klog.Warningf("Machine priority set on node is not a valid number: %+v", err)
+		} else {
+			// only set valid number
+			machine, err = c.addAnnotationsToMachine(machine, map[string]string{
+				MachinePriority: nodePriority,
+			})
+			if err != nil {
+				return machine, err
+			}
+		}
 	}
 
 	machine, err = c.updateMachineConditions(machine, node.Status.Conditions)
@@ -878,6 +896,22 @@ func (c *controller) updateMachineFinalizers(machine *v1alpha1.Machine, finalize
 		klog.Warningf("Warning: Updated failed, retrying, error: %q", err)
 		c.updateMachineFinalizers(machine, finalizers)
 	}
+}
+
+func (c *controller) addAnnotationsToMachine(machine *v1alpha1.Machine, annotations map[string]string) (*v1alpha1.Machine, error) {
+	// Get the latest version of the machine so that we can avoid conflicts
+	m, err := c.controlMachineClient.Machines(machine.Namespace).Get(machine.Name, metav1.GetOptions{})
+	if err != nil {
+		return machine, err
+	}
+
+	if m.Annotations == nil {
+		m.Annotations = map[string]string{}
+	}
+	for k, v := range annotations {
+		m.Annotations[k] = v
+	}
+	return c.controlMachineClient.Machines(m.Namespace).Update(m)
 }
 
 /*
