@@ -432,10 +432,9 @@ func filterHighPriorityMachine(machines []*v1alpha1.Machine) (res []*v1alpha1.Ma
 		if value, ok := machine.Annotations[MachinePriority]; ok {
 			if value == "4" {
 				continue
-			} else {
-				res = append(res, machine)
 			}
 		}
+		res = append(res, machine)
 	}
 	return res
 }
