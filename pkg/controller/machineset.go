@@ -409,6 +409,7 @@ func (c *controller) manageReplicas(allMachines []*v1alpha1.Machine, machineSet 
 		klog.V(2).Infof("Too many replicas for %v %s/%s, need %d, deleting %d", machineSet.Kind, machineSet.Namespace, machineSet.Name, (machineSet.Spec.Replicas), diff)
 
 		machinesToDelete := getMachinesToDelete(activeMachines, diff)
+		machinesToDelete = filterHighPriorityMachine(machinesToDelete)
 
 		// Snapshot the UIDs (ns/name) of the machines we're expecting to see
 		// deleted, so we know to record their expectations exactly once either
@@ -422,6 +423,21 @@ func (c *controller) manageReplicas(allMachines []*v1alpha1.Machine, machineSet 
 	}
 
 	return nil
+}
+
+// filterHighPriorityMachine filter high priority machine.
+// if important pods are running on the machine, it will be marked as high priority
+func filterHighPriorityMachine(machines []*v1alpha1.Machine) (res []*v1alpha1.Machine) {
+	for _, machine := range machines {
+		if value, ok := machine.Annotations[MachinePriority]; ok {
+			if value == "4" {
+				continue
+			} else {
+				res = append(res, machine)
+			}
+		}
+	}
+	return res
 }
 
 // syncMachineSet will sync the MachineSet with the given key if it has had its expectations fulfilled,
