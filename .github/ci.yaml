@@ -1,0 +1,83 @@
+name: CI
+
+# This job will only be triggered when a PR is merged to `v0.29.0-pingcap` branch 
+# or a tag is pushed.
+on:
+  push:
+    branches:
+      - v0.29.0-pingcap
+    tags:
+      - "*"
+
+# Concurrency ensures that only a single job or workflow using the same concurrency group will run at a time.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: '1.14'
+  PROJECT_ID: pingcap-public
+
+jobs:
+  push-the-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Find the Go Build Cache
+        id: go
+        run: echo "::set-output name=cache::$(go env GOCACHE)"
+
+      - name: Cache the Go Build Cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.go.outputs.cache }}
+          key: ${{ runner.os }}-build-publish-artifacts-${{ hashFiles('**/go.sum') }}
+          restore-keys: ${{ runner.os }}-build-publish-artifacts-
+
+      - name: Cache Go Dependencies
+        uses: actions/cache@v2
+        with:
+          path: .work/pkg
+          key: ${{ runner.os }}-pkg-${{ hashFiles('**/go.sum') }}
+          restore-keys: ${{ runner.os }}-pkg-
+      
+      - name: Set up gcloud auth
+        uses: google-github-actions/auth@v0.4.0
+        with:
+          credentials_json: ${{ secrets.PUB_GCR_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0.3.0
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Test gcloud CLI
+        run: gcloud info
+
+      - name: Configure docker to use the gcloud command-line tool as a credential helper
+        run: gcloud auth configure-docker -q
+      
+      - name: Get tag name if any
+        uses: olegtarasov/get-tag@v2.1
+        id: tagName
+      
+      - name: Set the commit id as default value
+        run: echo "${{ github.sha }}" > VERSION
+
+      - name: Use the git tag name as the image tag if any
+        if: steps.tagName.outputs.tag != ''
+        run: echo "${{ steps.tagName.outputs.tag }}" > VERSION
+      
+      - name: Build docker image
+        run: |
+          cat VERSION
+          make docker-images
+      
+      - name: Push the image to GCR
+        run: make docker-push
