@@ -2,12 +2,17 @@ name: CI
 
 # This job will only be triggered when a PR is merged to `v0.29.0-pingcap` branch 
 # or a tag is pushed.
+# on:
+#   push:
+#     branches:
+#       - v0.29.0-pingcap
+#     tags:
+#       - "*"
+
 on:
-  push:
+  pull_request:
     branches:
       - v0.29.0-pingcap
-    tags:
-      - "*"
 
 # Concurrency ensures that only a single job or workflow using the same concurrency group will run at a time.
 concurrency:
@@ -15,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GO_VERSION: '1.16'
+  GO_VERSION: '1.1'
   PROJECT_ID: pingcap-public
 
 jobs:
@@ -23,29 +28,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Find the Go Build Cache
-        id: go
-        run: echo "::set-output name=cache::$(go env GOCACHE)"
-
-      - name: Cache the Go Build Cache
-        uses: actions/cache@v2
-        with:
-          path: ${{ steps.go.outputs.cache }}
-          key: ${{ runner.os }}-build-publish-artifacts-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-build-publish-artifacts-
-
-      - name: Cache Go Dependencies
-        uses: actions/cache@v2
-        with:
-          path: .work/pkg
-          key: ${{ runner.os }}-pkg-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-pkg-
       
       - name: Set up gcloud auth
         uses: google-github-actions/auth@v0.4.0
