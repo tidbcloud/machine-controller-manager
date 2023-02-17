@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -579,18 +580,18 @@ var _ = Describe("#createController", func() {
 
 		Expect(c).NotTo(BeNil())
 
-		allMachineWatch, err := c.controlMachineClient.Machines(objMeta.Namespace).Watch(metav1.ListOptions{})
+		allMachineWatch, err := c.controlMachineClient.Machines(objMeta.Namespace).Watch(context.TODO(), metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		defer allMachineWatch.Stop()
 
-		machine0Watch, err := c.controlMachineClient.Machines(objMeta.Namespace).Watch(metav1.ListOptions{
+		machine0Watch, err := c.controlMachineClient.Machines(objMeta.Namespace).Watch(context.TODO(), metav1.ListOptions{
 			FieldSelector: fmt.Sprintf("metadata.name=%s", machine0.Name),
 		})
 		Expect(err).NotTo(HaveOccurred())
 		defer machine0Watch.Stop()
 
 		go func() {
-			_, err := c.controlMachineClient.Machines(objMeta.Namespace).Create(machine0)
+			_, err := c.controlMachineClient.Machines(objMeta.Namespace).Create(context.TODO(), machine0, metav1.CreateOptions{})
 			if err != nil {
 				fmt.Printf("Error creating machine: %s", err)
 			}

@@ -19,6 +19,7 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -158,7 +159,7 @@ func (c *controller) reconcileClusterMachine(machine *v1alpha1.Machine) error {
 		return nil
 	}
 
-	machine, err = c.controlMachineClient.Machines(machine.Namespace).Get(machine.Name, metav1.GetOptions{})
+	machine, err = c.controlMachineClient.Machines(machine.Namespace).Get(context.TODO(), machine.Name, metav1.GetOptions{})
 	if err != nil {
 		klog.Errorf("Could not fetch machine object %s", err)
 		if apierrors.IsNotFound(err) {
@@ -290,7 +291,7 @@ func (c *controller) updateMachineState(machine *v1alpha1.Machine) (*v1alpha1.Ma
 				nodeName = node.Name
 				clone := machine.DeepCopy()
 				clone.Status.Node = nodeName
-				clone, err = c.controlMachineClient.Machines(clone.Namespace).UpdateStatus(clone)
+				clone, err = c.controlMachineClient.Machines(clone.Namespace).UpdateStatus(context.TODO(), clone, metav1.UpdateOptions{})
 				if err != nil {
 					klog.Errorf("Could not update status of the machine-object %s due to error %v", machine.Name, err)
 					return machine, err
@@ -377,7 +378,7 @@ func (c *controller) updateMachineState(machine *v1alpha1.Machine) (*v1alpha1.Ma
 
 	if n := clone.Labels["node"]; n == "" {
 		clone.Labels["node"] = machine.Status.Node
-		machine, err = c.controlMachineClient.Machines(clone.Namespace).Update(clone)
+		machine, err = c.controlMachineClient.Machines(clone.Namespace).Update(context.TODO(), clone, metav1.UpdateOptions{})
 		if err != nil {
 			klog.Warningf("Machine update failed. Retrying, error: %s", err)
 			return machine, err
@@ -456,7 +457,7 @@ func (c *controller) machineCreate(machine *v1alpha1.Machine, driver driver.Driv
 	for {
 		machineName := machine.Name
 		// Get the latest version of the machine so that we can avoid conflicts
-		machine, err := c.controlMachineClient.Machines(machine.Namespace).Get(machine.Name, metav1.GetOptions{})
+		machine, err := c.controlMachineClient.Machines(machine.Namespace).Get(context.TODO(), machine.Name, metav1.GetOptions{})
 		if err != nil {
 
 			if apierrors.IsNotFound(err) {
@@ -504,7 +505,7 @@ func (c *controller) machineCreate(machine *v1alpha1.Machine, driver driver.Driv
 			clone.Annotations[MachinePriority] = "3"
 		}
 		clone.Spec.ProviderID = actualProviderID
-		machine, err = c.controlMachineClient.Machines(clone.Namespace).Update(clone)
+		machine, err = c.controlMachineClient.Machines(clone.Namespace).Update(context.TODO(), clone, metav1.UpdateOptions{})
 		if err != nil {
 			klog.Warningf("Machine UPDATE failed for %q. Retrying, error: %s", machineName, err)
 			continue
@@ -514,7 +515,7 @@ func (c *controller) machineCreate(machine *v1alpha1.Machine, driver driver.Driv
 		clone.Status.Node = nodeName
 		clone.Status.LastOperation = lastOperation
 		clone.Status.CurrentStatus = currentStatus
-		_, err = c.controlMachineClient.Machines(clone.Namespace).UpdateStatus(clone)
+		_, err = c.controlMachineClient.Machines(clone.Namespace).UpdateStatus(context.TODO(), clone, metav1.UpdateOptions{})
 		if err != nil {
 			klog.Warningf("Machine/status UPDATE failed for %q. Retrying, error: %s", machineName, err)
 			continue
@@ -530,7 +531,7 @@ func (c *controller) machineUpdate(machine *v1alpha1.Machine, actualProviderID s
 	klog.V(2).Infof("Setting MachineId of %s to %s", machine.Name, actualProviderID)
 
 	for {
-		machine, err := c.controlMachineClient.Machines(machine.Namespace).Get(machine.Name, metav1.GetOptions{})
+		machine, err := c.controlMachineClient.Machines(machine.Namespace).Get(context.TODO(), machine.Name, metav1.GetOptions{})
 		if err != nil {
 			klog.Errorf("Could not fetch machine object while setting up MachineId %s for Machine %s due to error %s", actualProviderID, machine.Name, err)
 			return err
@@ -538,7 +539,7 @@ func (c *controller) machineUpdate(machine *v1alpha1.Machine, actualProviderID s
 
 		clone := machine.DeepCopy()
 		clone.Spec.ProviderID = actualProviderID
-		machine, err = c.controlMachineClient.Machines(clone.Namespace).Update(clone)
+		machine, err = c.controlMachineClient.Machines(clone.Namespace).Update(context.TODO(), clone, metav1.UpdateOptions{})
 		if err != nil {
 			klog.Warningf("Machine update failed. Retrying, error: %s", err)
 			continue
@@ -552,7 +553,7 @@ func (c *controller) machineUpdate(machine *v1alpha1.Machine, actualProviderID s
 			LastUpdateTime: metav1.Now(),
 		}
 		clone.Status.LastOperation = lastOperation
-		_, err = c.controlMachineClient.Machines(clone.Namespace).UpdateStatus(clone)
+		_, err = c.controlMachineClient.Machines(clone.Namespace).UpdateStatus(context.TODO(), clone, metav1.UpdateOptions{})
 		if err != nil {
 			klog.Warningf("Machine/status update failed. Retrying, error: %s", err)
 			continue
@@ -725,7 +726,7 @@ func (c *controller) machineDelete(machine *v1alpha1.Machine, driver driver.Driv
 
 		if nodeName != "" {
 			// Delete node object
-			err = c.targetCoreClient.CoreV1().Nodes().Delete(nodeName, &metav1.DeleteOptions{})
+			err = c.targetCoreClient.CoreV1().Nodes().Delete(context.TODO(), nodeName, metav1.DeleteOptions{})
 			if err != nil && !apierrors.IsNotFound(err) {
 				// If its an error, and anyother error than object not found
 				message := fmt.Sprintf("Deletion of Node Object %q failed due to error: %s", nodeName, err)
@@ -745,7 +746,7 @@ func (c *controller) machineDelete(machine *v1alpha1.Machine, driver driver.Driv
 		c.deleteMachineFinalizers(machine)
 
 		// Delete machine object
-		err = c.controlMachineClient.Machines(machine.Namespace).Delete(machine.Name, &metav1.DeleteOptions{})
+		err = c.controlMachineClient.Machines(machine.Namespace).Delete(context.TODO(), machine.Name, metav1.DeleteOptions{})
 		if err != nil && !apierrors.IsNotFound(err) {
 			// If its an error, and anyother error than object not found
 			klog.Errorf("Deletion of Machine Object %q failed due to error: %s", machine.Name, err)
@@ -768,7 +769,7 @@ func (c *controller) updateMachineStatus(
 	currentStatus v1alpha1.CurrentStatus,
 ) (*v1alpha1.Machine, error) {
 	// Get the latest version of the machine so that we can avoid conflicts
-	clone, err := c.controlMachineClient.Machines(machine.Namespace).Get(machine.Name, metav1.GetOptions{})
+	clone, err := c.controlMachineClient.Machines(machine.Namespace).Get(context.TODO(), machine.Name, metav1.GetOptions{})
 	if err != nil {
 		return machine, err
 	}
@@ -777,7 +778,7 @@ func (c *controller) updateMachineStatus(
 	clone.Status.LastOperation = lastOperation
 	clone.Status.CurrentStatus = currentStatus
 
-	clone, err = c.controlMachineClient.Machines(clone.Namespace).UpdateStatus(clone)
+	clone, err = c.controlMachineClient.Machines(clone.Namespace).UpdateStatus(context.TODO(), clone, metav1.UpdateOptions{})
 	if err != nil {
 		// Keep retrying until update goes through
 		klog.V(3).Infof("Warning: Updated failed, retrying, error: %q", err)
@@ -795,7 +796,7 @@ func (c *controller) updateMachineConditions(machine *v1alpha1.Machine, conditio
 	)
 
 	// Get the latest version of the machine so that we can avoid conflicts
-	machine, err := c.controlMachineClient.Machines(machine.Namespace).Get(machine.Name, metav1.GetOptions{})
+	machine, err := c.controlMachineClient.Machines(machine.Namespace).Get(context.TODO(), machine.Name, metav1.GetOptions{})
 	if err != nil {
 		return machine, err
 	}
@@ -868,7 +869,7 @@ func (c *controller) updateMachineConditions(machine *v1alpha1.Machine, conditio
 	}
 
 	if objectRequiresUpdate {
-		clone, err = c.controlMachineClient.Machines(clone.Namespace).UpdateStatus(clone)
+		clone, err = c.controlMachineClient.Machines(clone.Namespace).UpdateStatus(context.TODO(), clone, metav1.UpdateOptions{})
 		if err != nil {
 			// Keep retrying until update goes through
 			klog.Warningf("Updated failed, retrying, error: %q", err)
@@ -883,14 +884,14 @@ func (c *controller) updateMachineConditions(machine *v1alpha1.Machine, conditio
 
 func (c *controller) updateMachineFinalizers(machine *v1alpha1.Machine, finalizers []string) {
 	// Get the latest version of the machine so that we can avoid conflicts
-	machine, err := c.controlMachineClient.Machines(machine.Namespace).Get(machine.Name, metav1.GetOptions{})
+	machine, err := c.controlMachineClient.Machines(machine.Namespace).Get(context.TODO(), machine.Name, metav1.GetOptions{})
 	if err != nil {
 		return
 	}
 
 	clone := machine.DeepCopy()
 	clone.Finalizers = finalizers
-	_, err = c.controlMachineClient.Machines(clone.Namespace).Update(clone)
+	_, err = c.controlMachineClient.Machines(clone.Namespace).Update(context.TODO(), clone, metav1.UpdateOptions{})
 	if err != nil {
 		// Keep retrying until update goes through
 		klog.Warningf("Warning: Updated failed, retrying, error: %q", err)
@@ -900,7 +901,7 @@ func (c *controller) updateMachineFinalizers(machine *v1alpha1.Machine, finalize
 
 func (c *controller) addAnnotationsToMachine(machine *v1alpha1.Machine, annotations map[string]string) (*v1alpha1.Machine, error) {
 	// Get the latest version of the machine so that we can avoid conflicts
-	m, err := c.controlMachineClient.Machines(machine.Namespace).Get(machine.Name, metav1.GetOptions{})
+	m, err := c.controlMachineClient.Machines(machine.Namespace).Get(context.TODO(), machine.Name, metav1.GetOptions{})
 	if err != nil {
 		return machine, err
 	}
@@ -911,7 +912,7 @@ func (c *controller) addAnnotationsToMachine(machine *v1alpha1.Machine, annotati
 	for k, v := range annotations {
 		m.Annotations[k] = v
 	}
-	return c.controlMachineClient.Machines(m.Namespace).Update(m)
+	return c.controlMachineClient.Machines(m.Namespace).Update(context.TODO(), m, metav1.UpdateOptions{})
 }
 
 /*
