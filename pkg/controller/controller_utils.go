@@ -23,6 +23,7 @@ Modifications Copyright (c) 2017 SAP SE or an SAP affiliate company. All rights 
 package controller
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -45,7 +46,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/utils/clock"
+
+	// "k8s.io/apimachinery/pkg/util/clock"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
@@ -425,7 +428,7 @@ var _ MachineSetControlInterface = &RealMachineSetControl{}
 
 // PatchMachineSet patches the machineSet object
 func (r RealMachineSetControl) PatchMachineSet(namespace, name string, data []byte) error {
-	_, err := r.controlMachineClient.MachineSets(namespace).Patch(name, types.MergePatchType, data)
+	_, err := r.controlMachineClient.MachineSets(namespace).Patch(context.TODO(), name, types.MergePatchType, data, metav1.PatchOptions{})
 	return err
 }
 
@@ -446,7 +449,7 @@ var _ RevisionControlInterface = &RealControllerRevisionControl{}
 
 // PatchControllerRevision is the patch method used to patch the controller revision
 func (r RealControllerRevisionControl) PatchControllerRevision(namespace, name string, data []byte) error {
-	_, err := r.KubeClient.AppsV1beta1().ControllerRevisions(namespace).Patch(name, types.StrategicMergePatchType, data)
+	_, err := r.KubeClient.AppsV1beta1().ControllerRevisions(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metav1.PatchOptions{})
 	return err
 }
 
@@ -581,7 +584,7 @@ func (r RealMachineControl) createMachines(namespace string, template *v1alpha1.
 	}
 
 	var newMachine *v1alpha1.Machine
-	if newMachine, err = r.controlMachineClient.Machines(namespace).Create(machine); err != nil {
+	if newMachine, err = r.controlMachineClient.Machines(namespace).Create(context.TODO(), machine, metav1.CreateOptions{}); err != nil {
 		klog.Error(err)
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreateMachineReason, "Error creating: %v", err)
 		return err
@@ -600,7 +603,7 @@ func (r RealMachineControl) createMachines(namespace string, template *v1alpha1.
 
 // PatchMachine applies a patch on machine
 func (r RealMachineControl) PatchMachine(namespace string, name string, data []byte) error {
-	_, err := r.controlMachineClient.Machines(namespace).Patch(name, types.MergePatchType, data)
+	_, err := r.controlMachineClient.Machines(namespace).Patch(context.TODO(), name, types.MergePatchType, data, metav1.PatchOptions{})
 	return err
 }
 
@@ -612,7 +615,7 @@ func (r RealMachineControl) DeleteMachine(namespace string, machineID string, ob
 	}
 	klog.V(2).Infof("Controller %v deleting machine %v", accessor.GetName(), machineID)
 
-	if err := r.controlMachineClient.Machines(namespace).Delete(machineID, nil); err != nil {
+	if err := r.controlMachineClient.Machines(namespace).Delete(context.TODO(), machineID, metav1.DeleteOptions{}); err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedDeleteMachineReason, "Error deleting: %v", err)
 		return fmt.Errorf("unable to delete machines: %v", err)
 	}
@@ -647,7 +650,7 @@ func (r FakeMachineControl) createMachines(namespace string, template *v1alpha1.
 	}
 
 	var newMachine *v1alpha1.Machine
-	if newMachine, err = r.controlMachineClient.Machines(namespace).Create(machine); err != nil {
+	if newMachine, err = r.controlMachineClient.Machines(namespace).Create(context.TODO(), machine, metav1.CreateOptions{}); err != nil {
 		klog.Error(err)
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreateMachineReason, "Error creating: %v", err)
 		return err
@@ -673,7 +676,7 @@ func (r FakeMachineControl) CreateMachinesWithControllerRef(namespace string, te
 
 // PatchMachine applies a patch on machine
 func (r FakeMachineControl) PatchMachine(namespace string, name string, data []byte) error {
-	_, err := r.controlMachineClient.Machines(namespace).Patch(name, types.MergePatchType, data)
+	_, err := r.controlMachineClient.Machines(namespace).Patch(context.TODO(), name, types.MergePatchType, data, metav1.PatchOptions{})
 	return err
 }
 
@@ -685,7 +688,7 @@ func (r FakeMachineControl) DeleteMachine(namespace string, machineID string, ob
 	}
 	klog.V(2).Infof("Controller %v deleting machine %v", accessor.GetName(), machineID)
 
-	if err := r.controlMachineClient.Machines(namespace).Delete(machineID, nil); err != nil {
+	if err := r.controlMachineClient.Machines(namespace).Delete(context.TODO(), machineID, metav1.DeleteOptions{}); err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedDeleteMachineReason, "Error deleting: %v", err)
 		return fmt.Errorf("unable to delete machines: %v", err)
 	}
@@ -908,10 +911,10 @@ func AddOrUpdateTaintOnNode(c clientset.Interface, nodeName string, taints ...*v
 		// First we try getting node from the API server cache, as it's cheaper. If it fails
 		// we get it from etcd to be sure to have fresh data.
 		if firstTry {
-			oldNode, err = c.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{ResourceVersion: "0"})
+			oldNode, err = c.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{ResourceVersion: "0"})
 			firstTry = false
 		} else {
-			oldNode, err = c.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+			oldNode, err = c.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		}
 		if err != nil {
 			return err
@@ -965,10 +968,10 @@ func RemoveTaintOffNode(c clientset.Interface, nodeName string, node *v1.Node, t
 		// First we try getting node from the API server cache, as it's cheaper. If it fails
 		// we get it from etcd to be sure to have fresh data.
 		if firstTry {
-			oldNode, err = c.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{ResourceVersion: "0"})
+			oldNode, err = c.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{ResourceVersion: "0"})
 			firstTry = false
 		} else {
-			oldNode, err = c.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+			oldNode, err = c.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		}
 		if err != nil {
 			return err
@@ -1015,7 +1018,7 @@ func PatchNodeTaints(c clientset.Interface, nodeName string, oldNode *v1.Node, n
 		return fmt.Errorf("failed to create patch for node %q: %v", nodeName, err)
 	}
 
-	_, err = c.CoreV1().Nodes().Patch(string(nodeName), types.StrategicMergePatchType, patchBytes)
+	_, err = c.CoreV1().Nodes().Patch(context.TODO(), string(nodeName), types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{})
 	return err
 }
 
@@ -1025,7 +1028,7 @@ func UpdateNodeTaints(c clientset.Interface, nodeName string, oldNode *v1.Node, 
 	newNodeClone := oldNode.DeepCopy()
 	newNodeClone.Spec.Taints = newNode.Spec.Taints
 
-	_, err := c.CoreV1().Nodes().Update(newNodeClone)
+	_, err := c.CoreV1().Nodes().Update(context.TODO(), newNodeClone, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create update taints for node %q: %v", nodeName, err)
 	}

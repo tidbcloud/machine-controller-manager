@@ -16,6 +16,7 @@ limitations under the License.
 package controller
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -900,14 +901,14 @@ var _ = Describe("machine", func() {
 					// Add labels for force deletion
 					clone := machine.DeepCopy()
 					clone.Labels["force-deletion"] = "True"
-					machine, err = controller.controlMachineClient.Machines(objMeta.Namespace).Update(clone)
+					machine, err = controller.controlMachineClient.Machines(objMeta.Namespace).Update(context.TODO(), clone, metav1.UpdateOptions{})
 					Expect(err).ToNot(HaveOccurred())
 				}
 
 				if data.action.fakeMachineStatus != nil {
 					clone := machine.DeepCopy()
 					clone.Status = *data.action.fakeMachineStatus
-					machine, err = controller.controlMachineClient.Machines(objMeta.Namespace).UpdateStatus(clone)
+					machine, err = controller.controlMachineClient.Machines(objMeta.Namespace).UpdateStatus(context.TODO(), clone, metav1.UpdateOptions{})
 					Expect(err).ToNot(HaveOccurred())
 				}
 
@@ -927,7 +928,7 @@ var _ = Describe("machine", func() {
 					}
 
 					clone.Status.Conditions = []corev1.NodeCondition{newNodeCondition}
-					_, updateErr := controller.targetCoreClient.CoreV1().Nodes().UpdateStatus(clone)
+					_, updateErr := controller.targetCoreClient.CoreV1().Nodes().UpdateStatus(context.TODO(), clone, metav1.UpdateOptions{})
 					Expect(updateErr).To(BeNil())
 				}
 

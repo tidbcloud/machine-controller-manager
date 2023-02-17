@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var machinedeploymentsResource = schema.GroupVersionResource{Group: "machine.sap
 var machinedeploymentsKind = schema.GroupVersionKind{Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: "MachineDeployment"}
 
 // Get takes name of the machineDeployment, and returns the corresponding machineDeployment object, and an error if there is any.
-func (c *FakeMachineDeployments) Get(name string, options v1.GetOptions) (result *v1alpha1.MachineDeployment, err error) {
+func (c *FakeMachineDeployments) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.MachineDeployment, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(machinedeploymentsResource, c.ns, name), &v1alpha1.MachineDeployment{})
 
@@ -50,7 +52,7 @@ func (c *FakeMachineDeployments) Get(name string, options v1.GetOptions) (result
 }
 
 // List takes label and field selectors, and returns the list of MachineDeployments that match those selectors.
-func (c *FakeMachineDeployments) List(opts v1.ListOptions) (result *v1alpha1.MachineDeploymentList, err error) {
+func (c *FakeMachineDeployments) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.MachineDeploymentList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(machinedeploymentsResource, machinedeploymentsKind, c.ns, opts), &v1alpha1.MachineDeploymentList{})
 
@@ -72,14 +74,14 @@ func (c *FakeMachineDeployments) List(opts v1.ListOptions) (result *v1alpha1.Mac
 }
 
 // Watch returns a watch.Interface that watches the requested machineDeployments.
-func (c *FakeMachineDeployments) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeMachineDeployments) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(machinedeploymentsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a machineDeployment and creates it.  Returns the server's representation of the machineDeployment, and an error, if there is any.
-func (c *FakeMachineDeployments) Create(machineDeployment *v1alpha1.MachineDeployment) (result *v1alpha1.MachineDeployment, err error) {
+func (c *FakeMachineDeployments) Create(ctx context.Context, machineDeployment *v1alpha1.MachineDeployment, opts v1.CreateOptions) (result *v1alpha1.MachineDeployment, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(machinedeploymentsResource, c.ns, machineDeployment), &v1alpha1.MachineDeployment{})
 
@@ -90,7 +92,7 @@ func (c *FakeMachineDeployments) Create(machineDeployment *v1alpha1.MachineDeplo
 }
 
 // Update takes the representation of a machineDeployment and updates it. Returns the server's representation of the machineDeployment, and an error, if there is any.
-func (c *FakeMachineDeployments) Update(machineDeployment *v1alpha1.MachineDeployment) (result *v1alpha1.MachineDeployment, err error) {
+func (c *FakeMachineDeployments) Update(ctx context.Context, machineDeployment *v1alpha1.MachineDeployment, opts v1.UpdateOptions) (result *v1alpha1.MachineDeployment, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(machinedeploymentsResource, c.ns, machineDeployment), &v1alpha1.MachineDeployment{})
 
@@ -102,7 +104,7 @@ func (c *FakeMachineDeployments) Update(machineDeployment *v1alpha1.MachineDeplo
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeMachineDeployments) UpdateStatus(machineDeployment *v1alpha1.MachineDeployment) (*v1alpha1.MachineDeployment, error) {
+func (c *FakeMachineDeployments) UpdateStatus(ctx context.Context, machineDeployment *v1alpha1.MachineDeployment, opts v1.UpdateOptions) (*v1alpha1.MachineDeployment, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(machinedeploymentsResource, "status", c.ns, machineDeployment), &v1alpha1.MachineDeployment{})
 
@@ -113,7 +115,7 @@ func (c *FakeMachineDeployments) UpdateStatus(machineDeployment *v1alpha1.Machin
 }
 
 // Delete takes name of the machineDeployment and deletes it. Returns an error if one occurs.
-func (c *FakeMachineDeployments) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeMachineDeployments) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(machinedeploymentsResource, c.ns, name), &v1alpha1.MachineDeployment{})
 
@@ -121,15 +123,15 @@ func (c *FakeMachineDeployments) Delete(name string, options *v1.DeleteOptions) 
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeMachineDeployments) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(machinedeploymentsResource, c.ns, listOptions)
+func (c *FakeMachineDeployments) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(machinedeploymentsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.MachineDeploymentList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched machineDeployment.
-func (c *FakeMachineDeployments) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.MachineDeployment, err error) {
+func (c *FakeMachineDeployments) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.MachineDeployment, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(machinedeploymentsResource, c.ns, name, pt, data, subresources...), &v1alpha1.MachineDeployment{})
 
@@ -140,7 +142,7 @@ func (c *FakeMachineDeployments) Patch(name string, pt types.PatchType, data []b
 }
 
 // GetScale takes name of the machineDeployment, and returns the corresponding scale object, and an error if there is any.
-func (c *FakeMachineDeployments) GetScale(machineDeploymentName string, options v1.GetOptions) (result *v1alpha1.Scale, err error) {
+func (c *FakeMachineDeployments) GetScale(ctx context.Context, machineDeploymentName string, options v1.GetOptions) (result *v1alpha1.Scale, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetSubresourceAction(machinedeploymentsResource, c.ns, "scale", machineDeploymentName), &v1alpha1.Scale{})
 
@@ -151,7 +153,7 @@ func (c *FakeMachineDeployments) GetScale(machineDeploymentName string, options 
 }
 
 // UpdateScale takes the representation of a scale and updates it. Returns the server's representation of the scale, and an error, if there is any.
-func (c *FakeMachineDeployments) UpdateScale(machineDeploymentName string, scale *v1alpha1.Scale) (result *v1alpha1.Scale, err error) {
+func (c *FakeMachineDeployments) UpdateScale(ctx context.Context, machineDeploymentName string, scale *v1alpha1.Scale, opts v1.UpdateOptions) (result *v1alpha1.Scale, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(machinedeploymentsResource, "scale", c.ns, scale), &v1alpha1.Scale{})
 
